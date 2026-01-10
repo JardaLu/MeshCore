@@ -4,6 +4,8 @@
 #include <Mesh.h>
 #include <RTClib.h>
 #include <target.h>
+#include "helpers/Vin12Sensor.h"
+
 
 #if defined(NRF52_PLATFORM) || defined(STM32_PLATFORM)
   #include <InternalFileSystem.h>
@@ -78,6 +80,9 @@ struct NeighbourInfo {
 #define FIRMWARE_ROLE "repeater"
 
 #define PACKET_LOG_FILE  "/packet_log"
+
+
+
 
 class MyMesh : public mesh::Mesh, public CommonCLICallbacks {
   FILESYSTEM* _fs;
