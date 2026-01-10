@@ -3,6 +3,8 @@
 
 /* ------------------------------ Config -------------------------------- */
 
+#include "MyMesh.h"
+
 #ifndef LORA_FREQ
   #define LORA_FREQ 915.0
 #endif
@@ -146,7 +148,9 @@ int MyMesh::handleRequest(ClientInfo *sender, uint32_t sender_timestamp, uint8_t
 
   if (payload[0] == REQ_TYPE_GET_STATUS) {  // guests can also access this now
     RepeaterStats stats;
-    stats.batt_milli_volts = board.getBattMilliVolts();
+    uint32_t vin_mv = readVin12_mV();
+    if (vin_mv > 65535) vin_mv = 65535;
+    stats.batt_milli_volts = (uint16_t)vin_mv;
     stats.curr_tx_queue_len = _mgr->getOutboundCount(0xFFFFFFFF);
     stats.noise_floor = (int16_t)_radio->getNoiseFloor();
     stats.last_rssi = (int16_t)radio_driver.getLastRSSI();
@@ -171,8 +175,13 @@ int MyMesh::handleRequest(ClientInfo *sender, uint32_t sender_timestamp, uint8_t
   if (payload[0] == REQ_TYPE_GET_TELEMETRY_DATA) {
     uint8_t perm_mask = ~(payload[1]); // NEW: first reserved byte (of 4), is now inverse mask to apply to permissions
 
-    telemetry.reset();
-    telemetry.addVoltage(TELEM_CHANNEL_SELF, (float)board.getBattMilliVolts() / 1000.0f);
+telemetry.reset();
+
+uint32_t vin_mv = readVin12_mV();
+if (vin_mv > 65535) vin_mv = 65535;
+
+telemetry.addVoltage(1, (float)vin_mv / 1000.0f);
+
 
     // query other sensors -- target specific
     if ((sender->permissions & PERM_ACL_ROLE_MASK) == PERM_ACL_GUEST) {
@@ -1079,6 +1088,23 @@ void MyMesh::loop() {
 #endif
 
   mesh::Mesh::loop();
+
+  {
+    const bool debug = true;  // <- vypni na false
+
+    if (debug) {
+      static uint32_t next_batt_log = 0;
+      if (next_batt_log == 0 || millisHasNowPassed(next_batt_log)) {
+        uint32_t vin_mv = readVin12_mV();
+        if (vin_mv > 65535) vin_mv = 65535;
+
+        Serial.printf("VIN12=%u mV (%.3f V)\n", (unsigned)vin_mv, vin_mv / 1000.0f);
+
+        next_batt_log = futureMillis(20000); 
+      }
+    }
+  }
+
 
   if (next_flood_advert && millisHasNowPassed(next_flood_advert)) {
     mesh::Packet *pkt = createSelfAdvert();

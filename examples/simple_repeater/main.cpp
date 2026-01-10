@@ -11,7 +11,9 @@
 StdRNG fast_rng;
 SimpleMeshTables tables;
 
-MyMesh the_mesh(board, radio_driver, *new ArduinoMillis(), fast_rng, rtc_clock, tables);
+
+static ArduinoMillis ms;
+MyMesh the_mesh(board, radio_driver, ms, fast_rng, rtc_clock, tables);
 
 void halt() {
   while (1) ;
